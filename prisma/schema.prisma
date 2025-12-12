@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Platform {
+  instagram
+  youtube
+  tiktok
+  twitter
+}
+
+enum ContentType {
+  post
+  story
+  reel
+  video
+  short
+  tweet
+}
+
+model Influencer {
+  id                String   @id @default(uuid())
+  name              String
+  profileImageUrl   String?  @map("profile_image_url")
+  bio               String?
+  primaryPlatform   Platform @map("primary_platform")
+  niche             String[]
+  location          String?
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  socialAccounts    SocialAccount[]
+
+  @@map("influencers")
+}
+
+model SocialAccount {
+  id              String    @id @default(uuid())
+  influencerId    String    @map("influencer_id")
+  platform        Platform
+  handle          String
+  followersCount  Int       @map("followers_count")
+  avgViews        Int?      @map("avg_views")
+  avgLikes        Int       @map("avg_likes")
+  avgComments     Int       @map("avg_comments")
+  engagementRate  Float     @map("engagement_rate")
+  lastUpdated     DateTime  @default(now()) @map("last_updated")
+
+  influencer           Influencer            @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+  audienceDemographics AudienceDemographics?
+  pricing              Pricing[]
+
+  @@map("social_accounts")
+}
+
+model AudienceDemographics {
+  id               String  @id @default(uuid())
+  socialAccountId  String  @unique @map("social_account_id")
+  ageGroup         Json    @map("age_group")
+  genderSplit      Json    @map("gender_split")
+  topCountries     String[] @map("top_countries")
+  interests        String[]
+
+  socialAccount    SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@map("audience_demographics")
+}
+
+model Pricing {
+  id              String      @id @default(uuid())
+  socialAccountId String      @map("social_account_id")
+  contentType     ContentType @map("content_type")
+  priceMin        Float       @map("price_min")
+  priceMax        Float?      @map("price_max")
+  currency        String      @default("USD")
+
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@map("pricing")
+}
+
+model Brand {
+  id              String   @id @default(uuid())
+  name            String
+  industry        String?
+  targetAudience  Json?    @map("target_audience")
+  budgetRange     String?  @map("budget_range")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("brands")
+}
