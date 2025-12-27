@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Sparkles, TrendingUp, DollarSign, Users, Target, CheckCircle2 } from 'lucide-react'
+import { Sparkles, TrendingUp, DollarSign, Users, Target, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const INDUSTRIES = ['fashion', 'tech', 'fitness', 'lifestyle', 'beauty', 'food', 'travel', 'gaming']
 const PLATFORMS = ['instagram', 'youtube', 'tiktok', 'twitter']
@@ -10,10 +10,36 @@ const AGE_GROUPS = ['18-24', '25-34', '35-44', '45+']
 const CONTENT_TYPES = ['post', 'story', 'reel', 'video', 'tweet']
 const LOCATIONS = ['US', 'UK', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR']
 
-type RecommendationResult = any
+interface RecommendationResult {
+  influencer: {
+    id: string
+    name: string
+    location: string | null
+    profileImageUrl: string | null
+  }
+  score: number
+  scoreBreakdown: {
+    platformMatch: number
+    nicheRelevance: number
+    audienceOverlap: number
+    engagementQuality: number
+    budgetFit: number
+    reachPotential: number
+    total: number
+  }
+  roiMetrics: {
+    predictedReach: number
+    costPerEngagement: number
+    expectedImpressions: number
+    estimatedROI: number
+  }
+  explanation: string
+  matchReasons: string[]
+}
 
 export default function RecommendationsPage() {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<RecommendationResult[]>([])
   const [formData, setFormData] = useState({
     industry: [] as string[],
@@ -39,6 +65,7 @@ export default function RecommendationsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
       const response = await fetch('/api/recommend', {
@@ -65,10 +92,17 @@ export default function RecommendationsPage() {
         }),
       })
 
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error?.message || 'Failed to get recommendations')
+      }
+
       const data = await response.json()
       setResults(data.recommendations || [])
-    } catch (error) {
-      console.error('Error getting recommendations:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      console.error('Error getting recommendations:', err)
     } finally {
       setLoading(false)
     }
@@ -98,6 +132,24 @@ export default function RecommendationsPage() {
             Tell us about your campaign, and we'll match you with the perfect influencers
           </p>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-medium text-red-900">Error getting recommendations</h3>
+                <p className="mt-2 text-red-700">{error}</p>
+                <button
+                  onClick={() => setError(null)}
+                  className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {results.length === 0 ? (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -384,7 +436,7 @@ export default function RecommendationsPage() {
                       <p className="mt-2 text-gray-700">{result.explanation}</p>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {result.matchReasons.map((reason: string, i: number) => (
+                        {result.matchReasons.map((reason, i) => (
                           <div
                             key={i}
                             className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-sm text-green-700"

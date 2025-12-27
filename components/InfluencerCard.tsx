@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { MapPin, Users, TrendingUp } from 'lucide-react'
 import { Instagram, Youtube, Twitter } from 'lucide-react'
+import InfluencerAvatar from './InfluencerAvatar'
 
 type SocialAccount = {
   platform: string
@@ -25,9 +26,10 @@ export default function InfluencerCard({ influencer }: { influencer: Influencer 
     0
   )
 
-  const avgEngagement =
-    influencer.socialAccounts.reduce((sum, account) => sum + account.engagementRate, 0) /
-    influencer.socialAccounts.length
+  const avgEngagement = influencer.socialAccounts.length > 0
+    ? influencer.socialAccounts.reduce((sum, account) => sum + account.engagementRate, 0) /
+      influencer.socialAccounts.length
+    : 0
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -61,25 +63,11 @@ export default function InfluencerCard({ influencer }: { influencer: Influencer 
     <Link href={`/influencer/${influencer.id}`}>
       <div className="group cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
         <div className="flex items-start space-x-4">
-          <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
-            {influencer.profileImageUrl ? (
-              <img
-                src={influencer.profileImageUrl}
-                alt={influencer.name}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=128&background=3b82f6&color=ffffff&bold=true`
-                }}
-              />
-            ) : (
-              <img
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=128&background=3b82f6&color=ffffff&bold=true`}
-                alt={influencer.name}
-                className="h-full w-full object-cover"
-              />
-            )}
-          </div>
+          <InfluencerAvatar
+            profileImageUrl={influencer.profileImageUrl}
+            name={influencer.name}
+            size="md"
+          />
 
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">

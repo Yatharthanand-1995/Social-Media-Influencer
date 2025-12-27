@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { MapPin, Users, TrendingUp, Instagram, Youtube, Twitter, DollarSign } from 'lucide-react'
 import EngagementChart from '@/components/EngagementChart'
 import AudienceCharts from '@/components/AudienceCharts'
+import InfluencerAvatar from '@/components/InfluencerAvatar'
 
 async function getInfluencer(id: string) {
   const influencer = await prisma.influencer.findUnique({
@@ -37,9 +38,10 @@ export default async function InfluencerProfilePage({
     0
   )
 
-  const avgEngagement =
-    influencer.socialAccounts.reduce((sum, account) => sum + account.engagementRate, 0) /
-    influencer.socialAccounts.length
+  const avgEngagement = influencer.socialAccounts.length > 0
+    ? influencer.socialAccounts.reduce((sum, account) => sum + account.engagementRate, 0) /
+      influencer.socialAccounts.length
+    : 0
 
   const formatFollowers = (count: number) => {
     if (count >= 1000000) {
@@ -92,25 +94,11 @@ export default async function InfluencerProfilePage({
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
           <div className="flex items-start space-x-6">
-            <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
-              {influencer.profileImageUrl ? (
-                <img
-                  src={influencer.profileImageUrl}
-                  alt={influencer.name}
-                  className="h-full w-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=256&background=3b82f6&color=ffffff&bold=true`
-                  }}
-                />
-              ) : (
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(influencer.name)}&size=256&background=3b82f6&color=ffffff&bold=true`}
-                  alt={influencer.name}
-                  className="h-full w-full object-cover"
-                />
-              )}
-            </div>
+            <InfluencerAvatar
+              profileImageUrl={influencer.profileImageUrl}
+              name={influencer.name}
+              size="lg"
+            />
 
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900">{influencer.name}</h1>

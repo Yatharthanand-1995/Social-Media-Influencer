@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCompleteChannelData } from '@/lib/youtube'
+import { youtubeImportSchema } from '@/lib/validations/youtube'
+import { ZodError } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
-    const { channelIdentifier } = await request.json()
+    const body = await request.json()
 
-    if (!channelIdentifier) {
-      return NextResponse.json(
-        { error: 'Channel ID or handle is required' },
-        { status: 400 }
-      )
-    }
+    // Validate request body
+    const { channelInput } = youtubeImportSchema.parse(body)
+    const channelIdentifier = channelInput
 
     // Fetch YouTube data
     const youtubeData = await getCompleteChannelData(channelIdentifier)
@@ -110,6 +109,16 @@ export async function POST(request: NextRequest) {
       message: `Successfully imported ${channelData.channelTitle}`,
     })
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation error',
+          details: error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
     console.error('Error importing YouTube channel:', error)
     return NextResponse.json(
       { error: 'Failed to import YouTube channel', details: String(error) },

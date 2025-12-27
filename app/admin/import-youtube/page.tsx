@@ -26,7 +26,7 @@ export default function ImportYouTubePage() {
       const response = await fetch('/api/youtube/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelIdentifier: channelInput.trim() }),
+        body: JSON.stringify({ channelInput: channelInput.trim() }),
       })
 
       const data = await response.json()

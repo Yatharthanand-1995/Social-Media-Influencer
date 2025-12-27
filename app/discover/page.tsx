@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import InfluencerCard from '@/components/InfluencerCard'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { Search, SlidersHorizontal, X, AlertCircle } from 'lucide-react'
 
 const PLATFORMS = ['instagram', 'youtube', 'tiktok', 'twitter']
 const NICHES = ['fashion', 'tech', 'fitness', 'lifestyle', 'beauty', 'food', 'travel', 'gaming']
@@ -22,11 +22,30 @@ const ENGAGEMENT_RANGES = [
   { label: 'Low (<2%)', min: 0, max: 2 },
 ]
 
-type Influencer = any
+interface Influencer {
+  id: string
+  name: string
+  bio: string | null
+  primaryPlatform: string
+  niche: string[]
+  location: string | null
+  profileImageUrl: string | null
+  socialAccounts: Array<{
+    id: string
+    platform: string
+    handle: string
+    followersCount: number
+    engagementRate: number
+    avgLikes: number
+    avgComments: number
+    avgViews: number | null
+  }>
+}
 
 export default function DiscoverPage() {
   const [influencers, setInfluencers] = useState<Influencer[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showFilters, setShowFilters] = useState(true)
 
   const [filters, setFilters] = useState({
@@ -47,6 +66,7 @@ export default function DiscoverPage() {
 
   const fetchInfluencers = async () => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams()
 
@@ -57,10 +77,18 @@ export default function DiscoverPage() {
       })
 
       const response = await fetch(`/api/search?${params.toString()}`)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error?.message || 'Failed to fetch influencers')
+      }
+
       const data = await response.json()
       setInfluencers(data.influencers || [])
-    } catch (error) {
-      console.error('Error fetching influencers:', error)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred'
+      setError(errorMessage)
+      console.error('Error fetching influencers:', err)
     } finally {
       setLoading(false)
     }
@@ -233,7 +261,23 @@ export default function DiscoverPage() {
           )}
 
           <main className="flex-1">
-            {loading ? (
+            {error ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="text-lg font-medium text-red-900">Error loading influencers</h3>
+                    <p className="mt-2 text-red-700">{error}</p>
+                    <button
+                      onClick={() => fetchInfluencers()}
+                      className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 transition"
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
                   <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
@@ -254,7 +298,7 @@ export default function DiscoverPage() {
                   Found {influencers.length} influencer{influencers.length !== 1 ? 's' : ''}
                 </div>
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                  {influencers.map((influencer: Influencer) => (
+                  {influencers.map((influencer) => (
                     <InfluencerCard key={influencer.id} influencer={influencer} />
                   ))}
                 </div>

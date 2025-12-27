@@ -38,21 +38,34 @@ export function calculateROI(
       // Predicted reach
       predictedReach += engagement * multiplier
 
-      // Expected impressions (organic + algorithm boost)
-      expectedImpressions +=
-        account.followersCount * (account.engagementRate / 100) * 1.5 +
-        account.followersCount * 0.1
+      // Expected impressions (more realistic calculation)
+      // Organic reach: 10-15% of followers see content
+      // Engagement multiplier: engaged users drive additional views
+      const organicReach = account.followersCount * 0.12 // 12% organic reach
+      const engagementBoost = engagement * 2 // Engaged users cause 2x views
+      expectedImpressions += organicReach + engagementBoost
 
       // Total engagement for CPE calculation
       totalEngagement += engagement
 
-      // Get pricing
-      const pricing = account.pricing.find(
-        (p) => p.contentType.toLowerCase() === brandRequirements.contentType.toLowerCase()
-      )
+      // Get pricing (contentType can be array or string)
+      const contentTypes = Array.isArray(brandRequirements.contentType)
+        ? brandRequirements.contentType
+        : brandRequirements.contentType ? [brandRequirements.contentType] : []
 
-      if (pricing) {
-        totalPrice += pricing.priceMin
+      if (contentTypes.length > 0) {
+        const pricing = account.pricing.find((p) =>
+          contentTypes.some((ct) => p.contentType.toLowerCase() === ct.toLowerCase())
+        )
+        if (pricing) {
+          totalPrice += pricing.priceMin
+        }
+      } else {
+        // If no content type specified, use cheapest pricing
+        const cheapest = account.pricing.sort((a, b) => a.priceMin - b.priceMin)[0]
+        if (cheapest) {
+          totalPrice += cheapest.priceMin
+        }
       }
     }
   }

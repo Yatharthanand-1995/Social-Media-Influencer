@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { matchBrandWithInfluencers } from '@/lib/algorithms/matching'
 import { BrandRequirements } from '@/lib/algorithms/types'
+import { recommendationRequestSchema } from '@/lib/validations/recommendation'
+import { ZodError } from 'zod'
 
 export async function POST(request: NextRequest) {
   try {
-    const brandRequirements: BrandRequirements = await request.json()
+    const body = await request.json()
+
+    // Validate request body
+    const validatedRequest = recommendationRequestSchema.parse(body)
+    const brandRequirements: BrandRequirements = {
+      ...validatedRequest,
+      campaignGoal: validatedRequest.campaignGoal as 'awareness' | 'sales' | 'engagement' | undefined,
+    }
 
     // Fetch all influencers with full data
     const influencers = await prisma.influencer.findMany({
@@ -65,6 +74,16 @@ export async function POST(request: NextRequest) {
       count: enrichedRecommendations.length,
     })
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation error',
+          details: error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
     console.error('Error generating recommendations:', error)
     return NextResponse.json(
       { error: 'Failed to generate recommendations' },

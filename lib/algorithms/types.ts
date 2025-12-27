@@ -1,22 +1,22 @@
 // Brand Requirements Interface
 export interface BrandRequirements {
   industry: string[]
-  campaignGoal: 'awareness' | 'sales' | 'engagement'
+  campaignGoal?: 'awareness' | 'sales' | 'engagement'
   targetAudience: {
-    ageGroups: string[]      // e.g., ["18-24", "25-34"]
-    gender: {
-      male: number           // percentage 0-100
-      female: number         // percentage 0-100
-      other: number          // percentage 0-100
+    ageGroups?: string[]      // e.g., ["18-24", "25-34"]
+    gender?: {
+      male?: number           // percentage 0-100
+      female?: number         // percentage 0-100
+      other?: number          // percentage 0-100
     }
-    locations: string[]      // e.g., ["US", "UK", "CA"]
+    locations?: string[]      // e.g., ["US", "UK", "CA"]
   }
   budget: {
     min: number
     max: number
   }
   platforms: string[]        // e.g., ["instagram", "youtube"]
-  contentType: string        // e.g., "post", "reel", "video"
+  contentType?: string[]        // e.g., ["post", "reel", "video"]
 }
 
 // Score Breakdown Interface
@@ -40,12 +40,12 @@ export interface ROIMetrics {
 
 // Recommendation Result Interface
 export interface RecommendationResult {
-  influencer: any            // Full influencer object from database
-  score: number              // Final score 0-100
+  influencer: InfluencerForScoring  // Influencer object with scoring data
+  score: number                      // Final score 0-100
   scoreBreakdown: ScoreBreakdown
   roiMetrics: ROIMetrics
-  explanation: string        // Why this is a good match
-  matchReasons: string[]     // Bullet points of match reasons
+  explanation: string                // Why this is a good match
+  matchReasons: string[]             // Bullet points of match reasons
 }
 
 // Influencer for Scoring (simplified)

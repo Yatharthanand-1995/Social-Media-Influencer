@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createInfluencerSchema } from '@/lib/validations/influencer'
+import { ZodError } from 'zod'
+import type { SocialAccountInput, PricingInput } from '@/types/influencer'
 
 export async function GET() {
   try {
@@ -31,16 +34,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
+    // Validate request body
+    const validatedData = createInfluencerSchema.parse(body)
+
     const influencer = await prisma.influencer.create({
       data: {
-        name: body.name,
-        bio: body.bio,
-        primaryPlatform: body.primaryPlatform,
-        niche: body.niche,
-        location: body.location,
-        profileImageUrl: body.profileImageUrl,
+        name: validatedData.name,
+        bio: validatedData.bio,
+        primaryPlatform: validatedData.primaryPlatform,
+        niche: validatedData.niche,
+        location: validatedData.location,
+        profileImageUrl: validatedData.profileImageUrl,
         socialAccounts: {
-          create: body.socialAccounts?.map((account: any) => ({
+          create: body.socialAccounts?.map((account: SocialAccountInput) => ({
             platform: account.platform,
             handle: account.handle,
             followersCount: account.followersCount,
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
               },
             } : undefined,
             pricing: account.pricing ? {
-              create: account.pricing.map((price: any) => ({
+              create: account.pricing.map((price: PricingInput) => ({
                 contentType: price.contentType,
                 priceMin: price.priceMin,
                 priceMax: price.priceMax,
@@ -79,6 +85,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(influencer, { status: 201 })
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation error',
+          details: error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
     console.error('Error creating influencer:', error)
     return NextResponse.json(
       { error: 'Failed to create influencer' },

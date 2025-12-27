@@ -82,9 +82,11 @@ export function calculateAudienceOverlapScore(
   // Age overlap (50% weight)
   let ageScore = 0
   const brandAgeGroups = brandRequirements.targetAudience.ageGroups
-  for (const ageGroup of brandAgeGroups) {
-    const percentage = demographics.ageGroup[ageGroup] || 0
-    ageScore += percentage
+  if (brandAgeGroups && brandAgeGroups.length > 0) {
+    for (const ageGroup of brandAgeGroups) {
+      const percentage = demographics.ageGroup?.[ageGroup] || 0
+      ageScore += percentage
+    }
   }
   const ageMatch = Math.min(100, ageScore) / 100
 
@@ -92,23 +94,25 @@ export function calculateAudienceOverlapScore(
   const brandGender = brandRequirements.targetAudience.gender
   const influencerGender = demographics.genderSplit
 
-  const genderOverlap =
-    Math.min(
-      (brandGender.male / 100) * (influencerGender.male || 0) +
-      (brandGender.female / 100) * (influencerGender.female || 0) +
-      (brandGender.other / 100) * (influencerGender.other || 0)
-    , 100) / 100
+  let genderOverlap = 0
+  if (brandGender && influencerGender) {
+    const maleOverlap = ((brandGender.male || 0) / 100) * (influencerGender.male || 0)
+    const femaleOverlap = ((brandGender.female || 0) / 100) * (influencerGender.female || 0)
+    const otherOverlap = ((brandGender.other || 0) / 100) * (influencerGender.other || 0)
+    genderOverlap = Math.min(maleOverlap + femaleOverlap + otherOverlap, 100) / 100
+  }
 
   // Location overlap (20% weight)
-  const brandLocations = brandRequirements.targetAudience.locations.map((l) =>
-    l.toUpperCase()
-  )
-  const influencerLocations = demographics.topCountries.map((l) => l.toUpperCase())
-
-  const locationMatches = brandLocations.filter((loc) =>
-    influencerLocations.includes(loc)
-  )
-  const locationMatch = locationMatches.length > 0 ? 1 : 0
+  let locationMatch = 0
+  const brandLocations = brandRequirements.targetAudience.locations
+  if (brandLocations && brandLocations.length > 0 && demographics.topCountries) {
+    const brandLocsUpper = brandLocations.map((l) => l.toUpperCase())
+    const influencerLocsUpper = demographics.topCountries.map((l) => l.toUpperCase())
+    const locationMatches = brandLocsUpper.filter((loc) =>
+      influencerLocsUpper.includes(loc)
+    )
+    locationMatch = locationMatches.length > 0 ? 1 : 0
+  }
 
   const audienceScore = (ageMatch * 0.5 + genderOverlap * 0.3 + locationMatch * 0.2) * 20
 
@@ -117,9 +121,14 @@ export function calculateAudienceOverlapScore(
 
 // 4. Engagement Quality Score (0-15 points)
 export function calculateEngagementScore(influencer: InfluencerForScoring): number {
+  if (!influencer.socialAccounts || influencer.socialAccounts.length === 0) {
+    return 0
+  }
+
   const engagementRates = influencer.socialAccounts.map((acc) => acc.engagementRate)
-  const avgEngagement =
-    engagementRates.reduce((sum, rate) => sum + rate, 0) / engagementRates.length
+  const avgEngagement = engagementRates.length > 0
+    ? engagementRates.reduce((sum, rate) => sum + rate, 0) / engagementRates.length
+    : 0
 
   if (avgEngagement >= 5) return 15 // High engagement
   if (avgEngagement >= 2) return 10 // Medium engagement
@@ -132,7 +141,14 @@ export function calculateBudgetFitScore(
   influencer: InfluencerForScoring
 ): number {
   const contentType = brandRequirements.contentType
-  const maxBudget = brandRequirements.budget.max
+  const maxBudget = brandRequirements.budget?.max
+
+  if (!maxBudget || !contentType) return 0
+
+  // Handle contentType as array or string
+  const contentTypes = Array.isArray(contentType)
+    ? contentType
+    : [contentType]
 
   // Get pricing for requested content type across all relevant platforms
   let prices: number[] = []
@@ -142,9 +158,9 @@ export function calculateBudgetFitScore(
       (acc) => acc.platform.toLowerCase() === platform.toLowerCase()
     )
 
-    if (account) {
-      const pricing = account.pricing.find(
-        (p) => p.contentType.toLowerCase() === contentType.toLowerCase()
+    if (account && account.pricing) {
+      const pricing = account.pricing.find((p) =>
+        contentTypes.some((ct) => p.contentType.toLowerCase() === ct.toLowerCase())
       )
 
       if (pricing) {
@@ -155,7 +171,9 @@ export function calculateBudgetFitScore(
 
   if (prices.length === 0) return 0
 
-  const avgPrice = prices.reduce((sum, price) => sum + price, 0) / prices.length
+  const avgPrice = prices.length > 0
+    ? prices.reduce((sum, price) => sum + price, 0) / prices.length
+    : 0
 
   if (avgPrice <= maxBudget) return 10 // Within budget
   if (avgPrice <= maxBudget * 1.2) return 7 // Slightly over

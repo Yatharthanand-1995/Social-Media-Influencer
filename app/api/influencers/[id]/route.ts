@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { updateInfluencerSchema } from '@/lib/validations/influencer'
+import { ZodError } from 'zod'
+import { handlePrismaError, formatErrorResponse, NotFoundError, ValidationError } from '@/lib/errors'
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +10,11 @@ export async function GET(
 ) {
   try {
     const { id } = await params
+
+    if (!id || typeof id !== 'string') {
+      const error = new ValidationError('Invalid influencer ID')
+      return NextResponse.json(formatErrorResponse(error), { status: error.statusCode })
+    }
 
     const influencer = await prisma.influencer.findUnique({
       where: { id },
@@ -21,19 +29,15 @@ export async function GET(
     })
 
     if (!influencer) {
-      return NextResponse.json(
-        { error: 'Influencer not found' },
-        { status: 404 }
-      )
+      const error = new NotFoundError('Influencer not found')
+      return NextResponse.json(formatErrorResponse(error), { status: error.statusCode })
     }
 
     return NextResponse.json(influencer)
   } catch (error) {
     console.error('Error fetching influencer:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch influencer' },
-      { status: 500 }
-    )
+    const appError = handlePrismaError(error)
+    return NextResponse.json(formatErrorResponse(appError), { status: appError.statusCode })
   }
 }
 
@@ -43,18 +47,20 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
+
+    if (!id || typeof id !== 'string') {
+      const error = new ValidationError('Invalid influencer ID')
+      return NextResponse.json(formatErrorResponse(error), { status: error.statusCode })
+    }
+
     const body = await request.json()
+
+    // Validate request body
+    const validatedData = updateInfluencerSchema.parse(body)
 
     const influencer = await prisma.influencer.update({
       where: { id },
-      data: {
-        name: body.name,
-        bio: body.bio,
-        primaryPlatform: body.primaryPlatform,
-        niche: body.niche,
-        location: body.location,
-        profileImageUrl: body.profileImageUrl,
-      },
+      data: validatedData,
       include: {
         socialAccounts: {
           include: {
@@ -67,11 +73,14 @@ export async function PUT(
 
     return NextResponse.json(influencer)
   } catch (error) {
+    if (error instanceof ZodError) {
+      const validationError = new ValidationError('Validation error', error.errors)
+      return NextResponse.json(formatErrorResponse(validationError), { status: validationError.statusCode })
+    }
+
     console.error('Error updating influencer:', error)
-    return NextResponse.json(
-      { error: 'Failed to update influencer' },
-      { status: 500 }
-    )
+    const appError = handlePrismaError(error)
+    return NextResponse.json(formatErrorResponse(appError), { status: appError.statusCode })
   }
 }
 
@@ -82,6 +91,11 @@ export async function DELETE(
   try {
     const { id } = await params
 
+    if (!id || typeof id !== 'string') {
+      const error = new ValidationError('Invalid influencer ID')
+      return NextResponse.json(formatErrorResponse(error), { status: error.statusCode })
+    }
+
     await prisma.influencer.delete({
       where: { id },
     })
@@ -89,9 +103,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Influencer deleted successfully' })
   } catch (error) {
     console.error('Error deleting influencer:', error)
-    return NextResponse.json(
-      { error: 'Failed to delete influencer' },
-      { status: 500 }
-    )
+    const appError = handlePrismaError(error)
+    return NextResponse.json(formatErrorResponse(appError), { status: appError.statusCode })
   }
 }

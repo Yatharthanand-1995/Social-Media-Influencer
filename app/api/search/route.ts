@@ -1,27 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { searchInfluencersSchema } from '@/lib/validations/search'
+import { ZodError } from 'zod'
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
 
-    const platform = searchParams.get('platform')
-    const niche = searchParams.get('niche')
-    const minFollowers = searchParams.get('minFollowers')
-    const maxFollowers = searchParams.get('maxFollowers')
-    const minEngagement = searchParams.get('minEngagement')
-    const maxEngagement = searchParams.get('maxEngagement')
-    const location = searchParams.get('location')
-    const sortBy = searchParams.get('sortBy') || 'createdAt'
-    const sortOrder = searchParams.get('sortOrder') || 'desc'
+    // Convert search params to object for validation
+    const params = {
+      platform: searchParams.get('platform') || undefined,
+      niche: searchParams.get('niche') || undefined,
+      minFollowers: searchParams.get('minFollowers') || undefined,
+      maxFollowers: searchParams.get('maxFollowers') || undefined,
+      minEngagement: searchParams.get('minEngagement') || undefined,
+      maxEngagement: searchParams.get('maxEngagement') || undefined,
+      location: searchParams.get('location') || undefined,
+      sortBy: searchParams.get('sortBy') || 'createdAt',
+      sortOrder: searchParams.get('sortOrder') || 'desc',
+      cursor: searchParams.get('cursor') || undefined,
+      limit: searchParams.get('limit') || '20',
+    }
+
+    // Validate search parameters
+    const validatedParams = searchInfluencersSchema.parse(params)
+
+    const { platform, niche, minFollowers, maxFollowers, minEngagement, maxEngagement, location, sortBy, sortOrder } = validatedParams
 
     const where: Prisma.InfluencerWhereInput = {}
 
     if (platform) {
+      // Convert to uppercase to match Prisma enum (INSTAGRAM, YOUTUBE, etc.)
+      const platformUpper = platform.toUpperCase()
       where.socialAccounts = {
         some: {
-          platform: platform as any,
+          platform: platformUpper,
         },
       }
     }
@@ -61,11 +75,12 @@ export async function GET(request: NextRequest) {
           0
         )
 
-        const avgEngagement =
-          influencer.socialAccounts.reduce(
-            (sum, account) => sum + account.engagementRate,
-            0
-          ) / influencer.socialAccounts.length
+        const avgEngagement = influencer.socialAccounts.length > 0
+          ? influencer.socialAccounts.reduce(
+              (sum, account) => sum + account.engagementRate,
+              0
+            ) / influencer.socialAccounts.length
+          : 0
 
         let matches = true
 
@@ -115,6 +130,16 @@ export async function GET(request: NextRequest) {
       count: influencers.length,
     })
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation error',
+          details: error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
     console.error('Error searching influencers:', error)
     return NextResponse.json(
       { error: 'Failed to search influencers' },
