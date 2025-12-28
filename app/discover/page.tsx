@@ -58,6 +58,12 @@ export default function DiscoverPage() {
     location: '',
     sortBy: 'createdAt',
     sortOrder: 'desc',
+    // New enrichment-based filters
+    minAuthenticityScore: '',
+    verifiedOnly: false,
+    growthTrend: '',
+    riskLevelMax: '',
+    hasHistoricalData: false,
   })
 
   useEffect(() => {
@@ -71,8 +77,8 @@ export default function DiscoverPage() {
       const params = new URLSearchParams()
 
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) {
-          params.append(key, value)
+        if (value !== '' && value !== false) {
+          params.append(key, String(value))
         }
       })
 
@@ -109,11 +115,20 @@ export default function DiscoverPage() {
       location: '',
       sortBy: 'createdAt',
       sortOrder: 'desc',
+      minAuthenticityScore: '',
+      verifiedOnly: false,
+      growthTrend: '',
+      riskLevelMax: '',
+      hasHistoricalData: false,
     })
   }
 
-  const activeFilterCount = Object.values(filters).filter(
-    (v) => v && v !== 'createdAt' && v !== 'desc'
+  const activeFilterCount = Object.entries(filters).filter(
+    ([key, v]) => {
+      if (key === 'sortBy' || key === 'sortOrder') return false
+      if (typeof v === 'boolean') return v === true
+      return v && v !== ''
+    }
   ).length
 
   return (
@@ -240,6 +255,93 @@ export default function DiscoverPage() {
                     placeholder="e.g., Los Angeles"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-4">Advanced Filters</h3>
+                </div>
+
+                {/* Authenticity Score */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Min. Authenticity Score
+                  </label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={filters.minAuthenticityScore || 0}
+                    onChange={(e) => updateFilter('minAuthenticityScore', e.target.value)}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-600 mt-1">
+                    <span>0</span>
+                    <span className="font-medium text-blue-600">
+                      {filters.minAuthenticityScore || 0}%
+                    </span>
+                    <span>100</span>
+                  </div>
+                </div>
+
+                {/* Verified Only */}
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.verifiedOnly}
+                      onChange={(e) => setFilters(prev => ({ ...prev, verifiedOnly: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Verified accounts only</span>
+                  </label>
+                </div>
+
+                {/* Growth Trend */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Growth Trend
+                  </label>
+                  <select
+                    value={filters.growthTrend}
+                    onChange={(e) => updateFilter('growthTrend', e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">All Trends</option>
+                    <option value="rising">Rising (5%+ growth)</option>
+                    <option value="stable">Stable (0-5% growth)</option>
+                    <option value="declining">Declining (&lt;0% growth)</option>
+                  </select>
+                </div>
+
+                {/* Risk Level */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Max Risk Level
+                  </label>
+                  <select
+                    value={filters.riskLevelMax}
+                    onChange={(e) => updateFilter('riskLevelMax', e.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    <option value="">All Risk Levels</option>
+                    <option value="low">Low Risk Only</option>
+                    <option value="medium">Low &amp; Medium</option>
+                    <option value="high">All (Including High)</option>
+                  </select>
+                </div>
+
+                {/* Has Historical Data */}
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={filters.hasHistoricalData}
+                      onChange={(e) => setFilters(prev => ({ ...prev, hasHistoricalData: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-4 w-4"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Has performance history</span>
+                  </label>
                 </div>
 
                 <div>

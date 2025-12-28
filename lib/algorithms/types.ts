@@ -120,7 +120,7 @@ export interface InfluencerForScoring {
     engagementRate: number
     avgLikes: number
     avgComments: number
-    avgViews?: number
+    avgViews: number | null
     pricing: Array<{
       contentType: string
       priceMin: number
@@ -160,7 +160,7 @@ export interface EnhancedInfluencerForScoring extends InfluencerForScoring {
     engagementRate: number
     avgLikes: number
     avgComments: number
-    avgViews?: number
+    avgViews: number | null
     pricing: Array<{
       contentType: string
       priceMin: number

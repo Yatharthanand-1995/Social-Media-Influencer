@@ -13,12 +13,14 @@ declare module "next-auth" {
       image?: string | null
       role: UserRole
       brandId?: string | null
+      agencyId?: string | null
     }
   }
 
   interface User {
     role: UserRole
     brandId?: string | null
+    agencyId?: string | null
   }
 }
 
@@ -26,6 +28,7 @@ declare module "next-auth/jwt" {
   interface JWT {
     role: UserRole
     brandId?: string | null
+    agencyId?: string | null
   }
 }
 
@@ -59,6 +62,7 @@ export const authOptions: NextAuthOptions = {
           },
           include: {
             brand: true,
+            agency: true,
           },
         })
 
@@ -82,6 +86,7 @@ export const authOptions: NextAuthOptions = {
           image: user.image,
           role: user.role,
           brandId: user.brandId,
+          agencyId: user.agencyId,
         }
       },
     }),
@@ -92,6 +97,7 @@ export const authOptions: NextAuthOptions = {
         token.id = user.id
         token.role = user.role
         token.brandId = user.brandId
+        token.agencyId = user.agencyId
       }
       return token
     },
@@ -100,6 +106,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string
         session.user.role = token.role
         session.user.brandId = token.brandId
+        session.user.agencyId = token.agencyId
       }
       return session
     },

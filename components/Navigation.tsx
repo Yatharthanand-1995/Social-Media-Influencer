@@ -107,7 +107,21 @@ export default function Navigation() {
                           </div>
                         </div>
 
-                        {session.user.role === 'BRAND' && (
+                        {session.user.agencyId && (
+                          <Link
+                            href="/agency/dashboard"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
+                            onClick={() => setUserMenuOpen(false)}
+                            role="menuitem"
+                          >
+                            <div className="flex items-center">
+                              <Settings className="mr-2 h-4 w-4" aria-hidden="true" />
+                              Agency Dashboard
+                            </div>
+                          </Link>
+                        )}
+
+                        {session.user.role === 'BRAND' && !session.user.agencyId && (
                           <Link
                             href="/brand/dashboard"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100"
