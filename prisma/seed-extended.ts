@@ -417,7 +417,7 @@ async function main() {
                   }
                 },
                 pricing: {
-                  create: pricing
+                  create: pricing as any
                 }
               }
             })

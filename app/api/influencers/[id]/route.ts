@@ -74,7 +74,7 @@ export async function PUT(
     return NextResponse.json(influencer)
   } catch (error) {
     if (error instanceof ZodError) {
-      const validationError = new ValidationError('Validation error', error.errors)
+      const validationError = new ValidationError('Validation error', error.issues)
       return NextResponse.json(formatErrorResponse(validationError), { status: validationError.statusCode })
     }
 

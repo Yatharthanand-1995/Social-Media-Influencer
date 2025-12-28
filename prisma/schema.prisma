@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ===================================
@@ -26,6 +25,8 @@ model User {
   sessions      Session[]
   brandId       String?   @unique @map("brand_id")
   brand         Brand?    @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  agencyId      String?   @map("agency_id")
+  agency        Agency?   @relation(fields: [agencyId], references: [id], onDelete: SetNull)
 
   @@map("users")
 }
@@ -107,6 +108,10 @@ model Influencer {
   createdAt         DateTime @default(now()) @map("created_at")
 
   socialAccounts    SocialAccount[]
+  authenticity      InfluencerAuthenticity?
+  campaignHistory   CampaignHistory[]
+  listItems         InfluencerListItem[]
+  collaborations    CampaignCollaboration[]
 
   @@index([primaryPlatform])
   @@index([location])
@@ -130,6 +135,9 @@ model SocialAccount {
   influencer           Influencer            @relation(fields: [influencerId], references: [id], onDelete: Cascade)
   audienceDemographics AudienceDemographics?
   pricing              Pricing[]
+  performanceSnapshots PerformanceSnapshot[]
+  contentAnalysis      ContentAnalysis?
+  platformMetrics      PlatformMetrics?
 
   @@index([platform])
   @@index([followersCount])
@@ -180,4 +188,302 @@ model Brand {
   user            User?    // One-to-one with User
 
   @@map("brands")
+}
+
+// ===================================
+// DATA ENRICHMENT MODELS
+// ===================================
+
+model InfluencerAuthenticity {
+  id                          String   @id @default(uuid())
+  influencerId                String   @unique @map("influencer_id")
+
+  // Authenticity Scores (0-100)
+  overallAuthenticityScore    Int      @map("overall_authenticity_score")
+  followerQualityScore        Int      @map("follower_quality_score")
+  engagementAuthenticityScore Int      @map("engagement_authenticity_score")
+
+  // Detection Metrics
+  suspiciousFollowersPercent  Float    @map("suspicious_followers_percent")
+  botLikesPercent            Float    @map("bot_likes_percent")
+  engagementDropOffRate      Float    @map("engagement_drop_off_rate")
+
+  // Verification
+  isVerified                 Boolean  @default(false) @map("is_verified")
+  verificationBadges         Json     @map("verification_badges")
+  riskLevel                  String   @map("risk_level") // 'low', 'medium', 'high'
+  riskFactors                String[] @map("risk_factors")
+
+  lastChecked                DateTime @default(now()) @map("last_checked")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+
+  influencer                 Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([influencerId])
+  @@index([overallAuthenticityScore])
+  @@index([riskLevel])
+  @@map("influencer_authenticity")
+}
+
+model PerformanceSnapshot {
+  id               String   @id @default(uuid())
+  socialAccountId  String   @map("social_account_id")
+  snapshotDate     DateTime @map("snapshot_date")
+
+  // Growth Metrics
+  followersCount   Int      @map("followers_count")
+  followersGrowth  Int      @map("followers_growth") // Change since last snapshot
+
+  // Engagement Metrics
+  engagementRate   Float    @map("engagement_rate")
+  avgLikes         Int      @map("avg_likes")
+  avgComments      Int      @map("avg_comments")
+  avgViews         Int?     @map("avg_views")
+  avgShares        Int?     @map("avg_shares")
+
+  // Content Activity
+  postsCount       Int      @map("posts_count")
+  postsThisPeriod  Int      @map("posts_this_period")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  socialAccount    SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@index([socialAccountId, snapshotDate])
+  @@index([snapshotDate])
+  @@map("performance_snapshots")
+}
+
+model ContentAnalysis {
+  id                    String   @id @default(uuid())
+  socialAccountId       String   @unique @map("social_account_id")
+
+  // Content Type Performance
+  bestPerformingType    ContentType @map("best_performing_type")
+  contentTypeBreakdown  Json     @map("content_type_breakdown")
+
+  // Posting Patterns
+  avgPostsPerWeek       Float    @map("avg_posts_per_week")
+  optimalPostingDays    String[] @map("optimal_posting_days")
+  optimalPostingHours   Int[]    @map("optimal_posting_hours")
+  postingConsistency    Float    @map("posting_consistency")
+
+  // Content Quality
+  avgVideoLength        Int?     @map("avg_video_length")
+  captionAvgLength      Int      @map("caption_avg_length")
+  hashtagUsageAvg       Int      @map("hashtag_usage_avg")
+
+  // Engagement Patterns
+  peakEngagementTime    String   @map("peak_engagement_time")
+  avgTimeToEngagement   Int      @map("avg_time_to_engagement")
+
+  // Topics/Themes
+  topTopics             String[] @map("top_topics")
+  topHashtags           String[] @map("top_hashtags")
+
+  analyzedAt           DateTime @default(now()) @map("analyzed_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  socialAccount        SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@index([socialAccountId])
+  @@map("content_analysis")
+}
+
+model CampaignHistory {
+  id                   String   @id @default(uuid())
+  influencerId         String   @map("influencer_id")
+
+  brandName            String   @map("brand_name")
+  campaignType         String   @map("campaign_type")
+  industry             String
+
+  // Performance
+  reach                Int
+  impressions          Int
+  engagement           Int
+  clicks               Int?
+  conversions          Int?
+
+  // ROI
+  paidAmount           Float    @map("paid_amount")
+  currency             String   @default("USD")
+  roi                  Float?
+
+  // Reliability
+  deliveredOnTime      Boolean  @default(true) @map("delivered_on_time")
+  qualityRating        Int?     @map("quality_rating")
+  professionalismScore Int?     @map("professionalism_score")
+
+  campaignDate         DateTime @map("campaign_date")
+  createdAt            DateTime @default(now()) @map("created_at")
+  influencer           Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([influencerId])
+  @@index([campaignDate])
+  @@map("campaign_history")
+}
+
+model PlatformMetrics {
+  id                  String   @id @default(uuid())
+  socialAccountId     String   @unique @map("social_account_id")
+
+  // Instagram-specific
+  storyViews          Int?     @map("story_views")
+  reelPlays           Int?     @map("reel_plays")
+  reelShares          Int?     @map("reel_shares")
+
+  // YouTube-specific
+  avgWatchTime        Int?     @map("avg_watch_time")
+  subscriberGrowth    Int?     @map("subscriber_growth")
+  avgRetention        Float?   @map("avg_retention")
+
+  // TikTok-specific
+  videoCompletionRate Float?   @map("video_completion_rate")
+  viralityScore       Float?   @map("virality_score")
+
+  // Twitter-specific
+  retweetRate         Float?   @map("retweet_rate")
+  impressionsPerTweet Int?     @map("impressions_per_tweet")
+
+  lastUpdated         DateTime @default(now()) @map("last_updated")
+  socialAccount       SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+
+  @@index([socialAccountId])
+  @@map("platform_metrics")
+}
+
+// ===================================
+// AGENCY & CLIENT MANAGEMENT
+// ===================================
+
+model Agency {
+  id               String   @id @default(uuid())
+  name             String
+  contactEmail     String   @map("contact_email")
+  subscriptionTier String   @default("free") @map("subscription_tier")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  users            User[]
+  clients          Client[]
+  savedSearches    SavedSearch[]
+
+  @@map("agencies")
+}
+
+model Client {
+  id          String   @id @default(uuid())
+  agencyId    String   @map("agency_id")
+  name        String
+  industry    String
+  logo        String?
+  notes       String?
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  agency      Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  campaigns   Campaign[]
+  savedLists  InfluencerList[]
+
+  @@index([agencyId])
+  @@map("clients")
+}
+
+model SavedSearch {
+  id             String   @id @default(uuid())
+  agencyId       String   @map("agency_id")
+  clientId       String?  @map("client_id")
+  name           String
+  searchCriteria Json     @map("search_criteria")
+
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  agency         Agency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@map("saved_searches")
+}
+
+model InfluencerList {
+  id          String   @id @default(uuid())
+  clientId    String   @map("client_id")
+  name        String
+  description String?
+  tags        String[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  influencers InfluencerListItem[]
+
+  @@index([clientId])
+  @@map("influencer_lists")
+}
+
+model InfluencerListItem {
+  id           String   @id @default(uuid())
+  listId       String   @map("list_id")
+  influencerId String   @map("influencer_id")
+  notes        String?
+  status       String   @default("prospect")
+  addedAt      DateTime @default(now()) @map("added_at")
+
+  list         InfluencerList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  influencer   Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, influencerId])
+  @@map("influencer_list_items")
+}
+
+// ===================================
+// CAMPAIGN TRACKING
+// ===================================
+
+model Campaign {
+  id            String   @id @default(uuid())
+  clientId      String   @map("client_id")
+  name          String
+  goal          String
+  budget        Float
+  startDate     DateTime @map("start_date")
+  endDate       DateTime @map("end_date")
+  status        String   @default("planning")
+  targetMetrics Json     @map("target_metrics")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  client         Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  collaborations CampaignCollaboration[]
+
+  @@index([clientId, status])
+  @@index([startDate])
+  @@map("campaigns")
+}
+
+model CampaignCollaboration {
+  id               String   @id @default(uuid())
+  campaignId       String   @map("campaign_id")
+  influencerId     String   @map("influencer_id")
+  agreedPrice      Float    @map("agreed_price")
+  contentType      ContentType @map("content_type")
+  deliverables     String
+  status           String   @default("proposed")
+
+  // Performance
+  actualReach      Int?     @map("actual_reach")
+  actualEngagement Int?     @map("actual_engagement")
+  actualROI        Float?   @map("actual_roi")
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  campaign         Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  influencer       Influencer @relation(fields: [influencerId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@map("campaign_collaborations")
 }

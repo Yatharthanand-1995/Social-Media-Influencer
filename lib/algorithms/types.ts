@@ -19,7 +19,7 @@ export interface BrandRequirements {
   contentType?: string[]        // e.g., ["post", "reel", "video"]
 }
 
-// Score Breakdown Interface
+// Score Breakdown Interface (Original - 6 factors)
 export interface ScoreBreakdown {
   platformMatch: number      // 0-25
   nicheRelevance: number     // 0-25
@@ -28,6 +28,24 @@ export interface ScoreBreakdown {
   budgetFit: number          // 0-10
   reachPotential: number     // 0-5
   total: number              // 0-100
+}
+
+// Enhanced Score Breakdown Interface (9 factors)
+export interface EnhancedScoreBreakdown {
+  // Adjusted weights for existing factors
+  platformMatch: number        // 0-20 (was 25)
+  nicheRelevance: number       // 0-20 (was 25)
+  audienceOverlap: number      // 0-15 (was 20)
+  engagementQuality: number    // 0-12 (was 15)
+  budgetFit: number            // 0-8 (was 10)
+  reachPotential: number       // 0-5 (unchanged)
+
+  // New factors from enrichment data
+  authenticityScore: number    // 0-10
+  performanceTrend: number     // 0-5
+  reliabilityScore: number     // 0-5
+
+  total: number                // 0-100
 }
 
 // ROI Metrics Interface
@@ -46,6 +64,47 @@ export interface RecommendationResult {
   roiMetrics: ROIMetrics
   explanation: string                // Why this is a good match
   matchReasons: string[]             // Bullet points of match reasons
+}
+
+// Enhanced Recommendation Result Interface
+export interface EnhancedRecommendationResult {
+  influencer: EnhancedInfluencerForScoring
+  score: number                      // Final score 0-100
+  scoreBreakdown: EnhancedScoreBreakdown
+  roiMetrics: ROIMetrics
+  explanation: string
+  matchReasons: string[]
+  // Additional insights from enrichment data
+  insights: {
+    authenticityLevel: 'high' | 'medium' | 'low' | 'unknown'
+    growthTrend: 'rising' | 'stable' | 'declining' | 'unknown'
+    reliability: 'excellent' | 'good' | 'fair' | 'unknown'
+    riskFactors: string[]
+  }
+}
+
+// Advanced Filtering Options
+export interface AdvancedFilters {
+  // Basic filters
+  platforms?: string[]
+  niches?: string[]
+  minFollowers?: number
+  maxFollowers?: number
+  minEngagement?: number
+  maxEngagement?: number
+  locations?: string[]
+  budgetRange?: { min: number; max: number }
+
+  // Enrichment-based filters
+  minAuthenticityScore?: number
+  verifiedOnly?: boolean
+  growthTrend?: 'rising' | 'stable' | 'declining'
+  riskLevelMax?: 'low' | 'medium' | 'high'
+  minCampaignSuccess?: number  // Percentage of successful campaigns
+  contentTypes?: string[]
+  postingFrequency?: 'daily' | 'weekly' | 'monthly'
+  hasHistoricalData?: boolean
+  minReliabilityScore?: number
 }
 
 // Influencer for Scoring (simplified)
@@ -71,6 +130,59 @@ export interface InfluencerForScoring {
       ageGroup: Record<string, number>
       genderSplit: Record<string, number>
       topCountries: string[]
+    } | null
+  }>
+}
+
+// Enhanced Influencer for Scoring (with enrichment data)
+export interface EnhancedInfluencerForScoring extends InfluencerForScoring {
+  // Authenticity data
+  authenticity?: {
+    overallAuthenticityScore: number
+    followerQualityScore: number
+    engagementAuthenticityScore: number
+    riskLevel: string
+    isVerified: boolean
+  } | null
+
+  // Campaign history for reliability scoring
+  campaignHistory?: Array<{
+    deliveredOnTime: boolean
+    qualityRating: number | null
+    professionalismScore: number | null
+    roi: number | null
+  }>
+
+  // Social accounts with enriched data
+  socialAccounts: Array<{
+    platform: string
+    followersCount: number
+    engagementRate: number
+    avgLikes: number
+    avgComments: number
+    avgViews?: number
+    pricing: Array<{
+      contentType: string
+      priceMin: number
+      priceMax: number | null
+    }>
+    audienceDemographics?: {
+      ageGroup: Record<string, number>
+      genderSplit: Record<string, number>
+      topCountries: string[]
+    } | null
+    // Performance snapshots for trend analysis
+    performanceSnapshots?: Array<{
+      snapshotDate: Date
+      followersCount: number
+      followersGrowth: number
+      engagementRate: number
+    }>
+    // Content analysis
+    contentAnalysis?: {
+      bestPerformingType: string
+      avgPostsPerWeek: number
+      postingConsistency: number
     } | null
   }>
 }

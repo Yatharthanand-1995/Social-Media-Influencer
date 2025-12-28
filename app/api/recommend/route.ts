@@ -11,8 +11,17 @@ export async function POST(request: NextRequest) {
 
     // Validate request body
     const validatedRequest = recommendationRequestSchema.parse(body)
+
+    // Normalize contentType to always be an array
+    const contentType = validatedRequest.contentType
+      ? Array.isArray(validatedRequest.contentType)
+        ? validatedRequest.contentType
+        : [validatedRequest.contentType]
+      : undefined
+
     const brandRequirements: BrandRequirements = {
       ...validatedRequest,
+      contentType,
       campaignGoal: validatedRequest.campaignGoal as 'awareness' | 'sales' | 'engagement' | undefined,
     }
 
@@ -78,7 +87,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       )

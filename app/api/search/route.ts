@@ -31,11 +31,11 @@ export async function GET(request: NextRequest) {
     const where: Prisma.InfluencerWhereInput = {}
 
     if (platform) {
-      // Convert to uppercase to match Prisma enum (INSTAGRAM, YOUTUBE, etc.)
-      const platformUpper = platform.toUpperCase()
+      // Convert to lowercase to match Prisma enum (instagram, youtube, etc.)
+      const platformLower = platform.toLowerCase()
       where.socialAccounts = {
         some: {
-          platform: platformUpper,
+          platform: platformLower as any,
         },
       }
     }
@@ -84,16 +84,16 @@ export async function GET(request: NextRequest) {
 
         let matches = true
 
-        if (minFollowers && totalFollowers < parseInt(minFollowers)) {
+        if (minFollowers && totalFollowers < minFollowers) {
           matches = false
         }
-        if (maxFollowers && totalFollowers > parseInt(maxFollowers)) {
+        if (maxFollowers && totalFollowers > maxFollowers) {
           matches = false
         }
-        if (minEngagement && avgEngagement < parseFloat(minEngagement)) {
+        if (minEngagement && avgEngagement < minEngagement) {
           matches = false
         }
-        if (maxEngagement && avgEngagement > parseFloat(maxEngagement)) {
+        if (maxEngagement && avgEngagement > maxEngagement) {
           matches = false
         }
 
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validation error',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       )
