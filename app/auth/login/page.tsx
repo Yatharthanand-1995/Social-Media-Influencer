@@ -27,7 +27,8 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password')
       } else if (result?.ok) {
-        router.push('/brand/dashboard')
+        // Redirect to home page, navigation will handle role-based routing
+        router.push('/')
         router.refresh()
       }
     } catch (error) {
